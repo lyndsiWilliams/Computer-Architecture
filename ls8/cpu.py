@@ -26,21 +26,65 @@ class CPU:
 
         address = 0
 
-        # For now, we've just hardcoded a program:
+        # If there are less than 2 arguments entered, return error
+        if len(sys.argv) != 2:
+            print("Usage: comp.py program_name")
+            sys.exit(1)
+        
+        # Otherwise, go on with the load method
+        try:
+            # Open the file entered
+            with open(sys.argv[1]) as f:
+                # Loop through the lines in the file
+                for line in f:
+                    # Remove all white space
+                    line = line.strip()
+                    # Split into a workable list
+                    temp = line.split()
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+                    # Bypass blank lines
+                    if len(temp) == 0:
+                        continue
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+                    # Bypass comments
+                    if temp[0][0] == '#':
+                        continue
+
+                    # Now that the file is cleaned up and
+                    # the unneccesary stuff is bypassed,
+                    # continue with the load process
+                    try:
+                        # Set the address of the ram to be
+                        # JUST the binary part of the file
+                        self.ram[address] = int(temp[0], 2)
+
+                    except ValueError:
+                        print(f"Invalid number: {temp[1]}")
+                        sys.exit(1)
+
+                    address += 1
+
+        except FileNotFoundError:
+            print(f"Couldn't open {sys.argv[1]}")
+            sys.exit(2)
+
+        if address == 0:
+            print("Program was empty!")
+            sys.exit(3)
+
+        # program = [
+        #     # From print8.ls8
+        #     0b10000010, # LDI R0,8
+        #     0b00000000,
+        #     0b00001000,
+        #     0b01000111, # PRN R0
+        #     0b00000000,
+        #     0b00000001, # HLT
+        # ]
+
+        # for instruction in program:
+        #     self.ram[address] = instruction
+        #     address += 1
 
 
     def alu(self, op, reg_a, reg_b):
