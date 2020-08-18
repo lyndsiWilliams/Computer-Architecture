@@ -2,6 +2,11 @@
 
 import sys
 
+"""Instruction definitions"""
+HLT = 0b00000001
+LDI = 0b10000010
+PRN = 0b01000111
+
 class CPU:
     """Main CPU class."""
 
@@ -72,14 +77,24 @@ class CPU:
     """
     def ram_read(self, MAR):
         # Address = MAR = Memory Address Register:
-        # holds the memory address we're reading or writing
+            # holds the memory address we're reading or writing
         return MAR
 
     def ram_write(self, MDR, MAR):
         # Value = MDR = Memory Data Register:
-        # holds the value to write or the value just read
+            # holds the value to write or the value just read
+        # This sets the parameter value (MDR) at the parameter address in memory (MAR)
         self.reg[MAR] = MDR
 
     def run(self):
         """Run the CPU."""
-        pass
+        self.running = True
+
+        while self.running:
+            # Read the memory address that's stored in the register's PC
+            # And store the result in the Instruction Register (ir)
+            ir = self.ram[self.pc]
+
+            """Halt the CPU (and exit the emulator)"""
+            if ir == HLT:
+                self.running = False
