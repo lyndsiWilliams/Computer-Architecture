@@ -98,3 +98,15 @@ class CPU:
             """Halt the CPU (and exit the emulator)"""
             if ir == HLT:
                 self.running = False
+
+            """Set the value of a register to an integer"""
+            elif ir == LDI:
+                # Set the address and value stored in ram
+                address = self.ram[self.pc + 1]
+                value = self.ram[self.pc + 2]
+                # Run the ram_write helper function with the current
+                # address/value as parameters
+                self.ram_write(address, value)
+                # Increment the pc by 3
+                # because this is a 3-bit operation
+                self.pc += 3
