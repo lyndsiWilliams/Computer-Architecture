@@ -78,9 +78,10 @@ class CPU:
     def ram_read(self, MAR):
         # Address = MAR = Memory Address Register:
             # holds the memory address we're reading or writing
-        return MAR
+        # This returns the register at the parameter address
+        return self.reg[MAR]
 
-    def ram_write(self, MDR, MAR):
+    def ram_write(self, MAR, MDR):
         # Value = MDR = Memory Data Register:
             # holds the value to write or the value just read
         # This sets the parameter value (MDR) at the parameter address in memory (MAR)
@@ -88,6 +89,7 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
+        # Start the program
         self.running = True
 
         while self.running:
@@ -100,8 +102,9 @@ class CPU:
                 self.running = False
 
             """Set the value of a register to an integer"""
-            elif ir == LDI:
-                # Set the address and value stored in ram
+            # elif wouldn't work here for some reason?
+            if ir == LDI:
+                # Set the address (1 bit) and value (2 bits) stored in ram
                 address = self.ram[self.pc + 1]
                 value = self.ram[self.pc + 2]
                 # Run the ram_write helper function with the current
@@ -110,3 +113,12 @@ class CPU:
                 # Increment the pc by 3
                 # because this is a 3-bit operation
                 self.pc += 3
+
+            elif ir == PRN:
+                # Set the address stored in ram (1 bit)
+                address = self.ram[self.pc + 1]
+                # Run the ram_read helper function with
+                # the current address and print it
+                print(self.ram_read(address))
+                # Increment the pc by 3 (2-bit operation)
+                self.pc += 2
