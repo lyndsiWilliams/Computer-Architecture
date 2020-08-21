@@ -21,6 +21,12 @@ MUL = 0b10100010    # Multiply
 DIV = 0b10100011    # Divide
 MOD = 0b10100100    # Modulus
 CMP = 0b10100111    # Compare
+AND = 0b10101000    # Bitwise-AND
+NOT = 0b01101001    # Bitwise-NOT
+OR  = 0b10101010    # Bitwise-OR
+XOR = 0b10101011    # Bitwise-XOR
+SHL = 0b10101100    # Shift bits left
+SHR = 0b10101101    # Shift bits right
 
 """
     AA-B-C-DD
@@ -62,11 +68,17 @@ class CPU:
         self.branchtable[JEQ] = self.JEQ        # Jump - Equal
         self.branchtable[JNE] = self.JNE        # Jump - not equal
         self.branchtable[ADD] = self.ADD        # Add
-        # self.branchtable[SUB] = self.SUB        # Subtract
+        self.branchtable[SUB] = self.SUB        # Subtract
         self.branchtable[MUL] = self.MUL        # Multiply
-        # self.branchtable[DIV] = self.DIV        # Divide
-        # self.branchtable[MOD] = self.MOD        # Modulus
+        self.branchtable[DIV] = self.DIV        # Divide
+        self.branchtable[MOD] = self.MOD        # Modulus
         self.branchtable[CMP] = self.CMP        # Compare
+        self.branchtable[AND] = self.AND        # Bitwise-AND
+        self.branchtable[NOT] = self.NOT        # Bitwise-NOT
+        self.branchtable[OR] = self.OR          # Bitwise-OR
+        self.branchtable[XOR] = self.XOR        # Bitwise-XOR
+        self.branchtable[SHL] = self.SHL        # Shift bits left
+        self.branchtable[SHR] = self.SHR        # Shift bits right
 
     def load(self):
         """Load a program into memory."""
@@ -143,6 +155,8 @@ class CPU:
         # storing the result in registerA.
         elif op == "DIV":
             self.reg[reg_a] /= self.reg[reg_b]
+        # Divide the value in the first register by the value in the second,
+        # storing the remainder of the result in registerA.
         elif op == "MOD":
             # If the value in the second register is 0...
             if reg_b == 0:
@@ -165,6 +179,28 @@ class CPU:
             # If a < b, set L to 1 (true)
             elif self.reg[reg_a] < self.reg[reg_b]:
                 self.FL[-3] = 1
+        # Bitwise-AND the values in registerA and registerB, then store the result in registerA.
+        elif op == "AND":
+            self.reg[reg_a] &= self.reg[reg_b]
+        # Perform a bitwise-NOT on the value in a register, storing the result in the register.
+        elif op == "NOT":
+            self.reg[reg_a] = ~(self.reg[reg_a])
+        # Perform a bitwise-OR between the values in registerA and registerB, storing the result in registerA.
+        elif op == "OR":
+            self.reg[reg_a] |= self.reg[reg_b]
+        # Perform a bitwise-XOR between the values in registerA and registerB, storing the result in registerA.
+        #   Bitwise XOR sets the bits in the result to 1 if either, but not both,
+        #   of the corresponding bits in the two operands is 1.
+        elif op == "XOR":
+            self.reg[reg_a] ^= self.reg[reg_b]
+        # Shift the value in registerA left by the number of bits specified in registerB
+        # filling the low bits with 0
+        elif op == "SHL":
+            self.reg[reg_a] = (self.reg[reg_a] << self.reg[reg_b])
+        # Shift the value in registerA right by the number of bits specified in registerB
+        # filling the high bits with 0.
+        elif op == "SHR":
+            self.reg[reg_a] = (self.reg[reg_a] >> self.reg[reg_b])
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -233,38 +269,6 @@ class CPU:
         # Increment the pc by 2 (2-bit operation)
         self.pc += 2
 
-    # Add the value in two registers and
-    # store the result in registerA.
-    def ADD(self):
-        # Set and store the first and second parameter values in ram
-        reg_a = self.ram[self.pc + 1]
-        reg_b = self.ram[self.pc + 2]
-        # Call the ALU method and pass it the operation and values
-        self.alu("ADD", reg_a, reg_b)
-        # Increment the pc by 3 (3-bit operation)
-        self.pc += 3
-
-    # Multiply the values in two registers together and
-    # store the result in registerA.
-    def MUL(self):
-        # Set and store the first and second parameter values in ram
-        reg_a = self.ram[self.pc + 1]
-        reg_b = self.ram[self.pc + 2]
-        # Call the ALU method and pass it the operation and values
-        self.alu("MUL", reg_a, reg_b)
-        # Increment the pc by 3 (3-bit operation)
-        self.pc += 3
-
-    # Compare the values in two registers
-    def CMP(self):
-        # Set and store the first and second parameter values in ram
-        reg_a = self.ram[self.pc + 1]
-        reg_b = self.ram[self.pc + 2]
-        # Call the ALU method and pass it the operation and values
-        self.alu("CMP", reg_a, reg_b)
-        # Increment the pc by 3 (3-bit operation)
-        self.pc += 3
-
     def PUSH(self):
         # Decrement the stack pointer
         self.reg[7] -= 1
@@ -293,6 +297,141 @@ class CPU:
         # Increment the pc by 2 (2-bit operation)
         self.pc += 2
 
+    """
+    ---------- ALU functions ----------
+    """
+    # Add the value in two registers and
+    # store the result in registerA.
+    def ADD(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("ADD", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Subtract the value in the second register from the first,
+    # storing the result in registerA.
+    def SUB(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("SUB", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Multiply the values in two registers together and
+    # store the result in registerA.
+    def MUL(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("MUL", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Divide the value in the first register by the value in the second,
+    # storing the result in registerA.
+    def DIV(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("DIV", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Divide the value in the first register by the value in the second,
+    # storing the remainder of the result in registerA.
+    def MOD(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("MOD", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Compare the values in two registers
+    def CMP(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("CMP", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Bitwise-AND the values in registerA and registerB, then store the result in registerA.
+    def AND(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("AND", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Perform a bitwise-NOT on the value in a register, storing the result in the register.
+    def NOT(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("NOT", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Perform a bitwise-OR between the values in registerA and registerB, storing the result in registerA.
+    def OR(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("OR", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Perform a bitwise-XOR between the values in registerA and registerB, storing the result in registerA.
+    #   Bitwise XOR sets the bits in the result to 1 if either, but not both,
+    #   of the corresponding bits in the two operands is 1.
+    def XOR(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("XOR", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Shift the value in registerA left by the number of bits specified in registerB
+    # filling the low bits with 0
+    def SHL(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("SHL", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    # Shift the value in registerA right by the number of bits specified in registerB
+    # filling the high bits with 0.
+    def SHR(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("SHR", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
+    """
+    ---------- PC mutator functions ----------
+    """
     # Calls a subroutine (function) at the address stored in the register
     def CALL(self):
         # Push return address
