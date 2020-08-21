@@ -12,12 +12,15 @@ POP = 0b01000110    # Pop
 CALL = 0b01010000   # Call
 RET = 0b00010001    # Return
 JMP = 0b01010100    # Jump
+JEQ = 0b01010101    # Jump - Equal
+JNE = 0b01010110    # Jump - Not equal
 """ALU"""
 ADD = 0b10100000    # Add
 SUB = 0b10100001    # Subtract
 MUL = 0b10100010    # Multiply
 DIV = 0b10100011    # Divide
 MOD = 0b10100100    # Modulus
+CMP = 0b10100111    # Compare
 
 """
     AA-B-C-DD
@@ -39,6 +42,8 @@ class CPU:
         self.reg = [0] * 8
         # Stack pointer
         self.reg[7] = 0xF4
+        # Flags: 8 bits, if a particular bit is set, that flag is "true"
+        self.FL = [0] * 8
         # Program Counter: the index into memory of the currently-executing instruction
         self.pc = 0
         # Boolean to start/stop the program
@@ -54,11 +59,14 @@ class CPU:
         self.branchtable[CALL] = self.CALL      # Call
         self.branchtable[RET] = self.RET        # Return
         self.branchtable[JMP] = self.JMP        # Jump
+        self.branchtable[JEQ] = self.JEQ        # Jump - Equal
+        self.branchtable[JNE] = self.JNE        # Jump - not equal
         self.branchtable[ADD] = self.ADD        # Add
         # self.branchtable[SUB] = self.SUB        # Subtract
         self.branchtable[MUL] = self.MUL        # Multiply
         # self.branchtable[DIV] = self.DIV        # Divide
         # self.branchtable[MOD] = self.MOD        # Modulus
+        self.branchtable[CMP] = self.CMP        # Compare
 
     def load(self):
         """Load a program into memory."""
@@ -144,6 +152,19 @@ class CPU:
             # Otherwise, do the modulus operation
             else:
                 self.reg[reg_a] %= self.reg[reg_b]
+        # Compare the values in two registers
+        #   Sets the flag bits: 00000LGE
+        #                            <>=
+        elif op == "CMP":
+            # If equal, set E to 1 (true)
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.FL[-1] = 1
+            # If a > b, set G to 1 (true)
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                self.FL[-2] = 1
+            # If a < b, set L to 1 (true)
+            elif self.reg[reg_a] < self.reg[reg_b]:
+                self.FL[-3] = 1
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -234,6 +255,16 @@ class CPU:
         # Increment the pc by 3 (3-bit operation)
         self.pc += 3
 
+    # Compare the values in two registers
+    def CMP(self):
+        # Set and store the first and second parameter values in ram
+        reg_a = self.ram[self.pc + 1]
+        reg_b = self.ram[self.pc + 2]
+        # Call the ALU method and pass it the operation and values
+        self.alu("CMP", reg_a, reg_b)
+        # Increment the pc by 3 (3-bit operation)
+        self.pc += 3
+
     def PUSH(self):
         # Decrement the stack pointer
         self.reg[7] -= 1
@@ -242,17 +273,17 @@ class CPU:
         # Value to push
         value = self.reg[reg_num]
         # Store it on the stack
-        top_of_stack_addr = self.reg[7]
+        top_of_stack_address = self.reg[7]
         # Push the value from the register to the RAM
-        self.ram[top_of_stack_addr] = value
+        self.ram[top_of_stack_address] = value
         # Increment the pc by 2 (2-bit operation)
         self.pc += 2
 
     def POP(self):
         # Point at the top of the stack
-        top_of_stack_addr = self.reg[7]
+        top_of_stack_address = self.reg[7]
         # Value to pop
-        value = self.ram[top_of_stack_addr]
+        value = self.ram[top_of_stack_address]
         # Get value from register
         reg_num = self.ram[self.pc + 1]
         # Overwrite the register number's value to the popped value
@@ -265,29 +296,62 @@ class CPU:
     # Calls a subroutine (function) at the address stored in the register
     def CALL(self):
         # Push return address
-        ret_addr = self.pc + 2
+        ret_address = self.pc + 2
         # Decrement the stack pointer
         self.reg[7] -= 1
-        self.ram[self.reg[7]] = ret_addr
+        self.ram[self.reg[7]] = ret_address
         # Set the PC to the address stored in the given register
         regnum = self.ram[self.pc + 1]
-        subroutine_addr = self.reg[regnum]
-        self.pc = subroutine_addr
+        subroutine_address = self.reg[regnum]
+        self.pc = subroutine_address
 
     # Pop the value from the top of the stack and store it in the PC
     def RET(self):
         # Pop the return addr off the stack
-        ret_addr = self.ram[self.reg[7]]
+        ret_address = self.ram[self.reg[7]]
         self.reg[7] += 1
         # Set the PC to it
-        self.pc = ret_addr
+        self.pc = ret_address
 
     # Set the PC to the address stored in the given register
     def JMP(self):
-        # Stored register will always be sitting at stack pointer
-        # Set the PC to it
+        # Grab the address from memory
         memory_address = self.ram[self.pc + 1]
+        # Set the PC to it
         self.pc = self.reg[memory_address]
+
+    # If equal flag is set (true), jump to the address stored in the given register
+    def JEQ(self):
+        # If the E flag is marked 1 (true)
+        if self.FL[-1] == 1:
+            # Set the address to jump to
+            address = self.ram[self.pc + 1]
+            # Set the new address
+            new_address = self.reg[address]
+            # Set the PC to the new address
+            self.pc = new_address
+        # If it's set to false, continue by only incrementing the PC counter
+        # (because this operation was still run)
+        else:
+            # 2 bits!
+            self.pc += 2
+
+    # If E flag is clear (false, 0), jump to the address stored in the given register.
+    def JNE(self):
+        # If the E flag is marked 0 (false)
+        if self.FL[-1] == 0:
+            # Set the address to jump to
+            address = self.ram[self.pc + 1]
+            # Set the new address
+            new_address = self.reg[address]
+            # Set the PC to the new address
+            self.pc = new_address
+        # If it's set to false, continue by only incrementing the PC counter
+        # (because this operation was still run)
+        else:
+            # 2 bits!
+            self.pc += 2
+
 
 
     """
