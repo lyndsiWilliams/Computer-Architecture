@@ -54,7 +54,7 @@ class CPU:
         self.branchtable[CALL] = self.CALL      # Call
         self.branchtable[RET] = self.RET        # Return
         self.branchtable[JMP] = self.JMP        # Jump
-        # self.branchtable[ADD] = self.ADD        # Add
+        self.branchtable[ADD] = self.ADD        # Add
         # self.branchtable[SUB] = self.SUB        # Subtract
         self.branchtable[MUL] = self.MUL        # Multiply
         # self.branchtable[DIV] = self.DIV        # Divide
@@ -302,8 +302,8 @@ class CPU:
             # And store the result in the Instruction Register (ir)
             ir = self.ram[self.pc]
 
-            if ir & 0b00010000 == 0:
+            if ir and 0b00010000 == 0:
+                self.pc += (ir >> 6) + 1
+            else:
                 # Find the ir method in the branchtable and execute it
                 self.branchtable[ir]()
-            else:
-                self.pc += (ir >> 6) + 1
